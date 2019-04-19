@@ -4,6 +4,8 @@ import argparse
 import csv
 import time
 
+import avro_schemas
+
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 producer = KafkaProducer(bootstrap_servers='localhost:9092')
@@ -22,15 +24,23 @@ delay = float(args.delay)
 instrument = args.instrument.lower()
 if 'dmi' in instrument:
     filepath = DMI_FILEPATH
+    schema = avro_schemas.dmi
+    field_names = [d['name'] for d in schema['fields']]
     topic = 'dmi'
 elif 'imu' in instrument:
     filepath = IMU_FILEPATH
+    schema = avro_schemas.imu
+    field_names = [d['name'] for d in schema['fields']]
     topic = 'imu'
 elif 'lidar' in instrument:
     filepath = LIDAR_FILEPATH
+    schema = avro_schemas.lidar
+    field_names = [d['name'] for d in schema['fields']]
     topic = 'lidar'
 elif 'gps' in instrument:
     filepath = GPS_FILEPATH
+    schema = avro_schemas.gps
+    field_names = [d['name'] for d in schema['fields']]
     topic = 'gps'
 else:
     print('ERROR: ARGUMENT {0} NOT IN INSTRUMENTS {1}'.format(args.instrument, INSTRUMENTS))
@@ -49,6 +59,8 @@ def spoof_from_csv(csv_filepath, delay_between_rows):
             message = ','.join(row)
             print(message)
             # send to kafka
+            records = dict(zip(field_names, row))
+            print(records)
             producer.send(topic, bytes(message, 'utf-8'))
             # wait for delay
             time.sleep(delay_between_rows)

@@ -4,6 +4,9 @@ import argparse
 import csv
 import time
 
+from fastavro import writer, reader, parse_schema
+import avro_schemas
+
 from kafka import KafkaConsumer
 from kafka.errors import KafkaError
 #import avro.schema
@@ -23,36 +26,53 @@ args = parser.parse_args()
 instrument = args.instrument.lower()
 if 'dmi' in instrument:
     filepath = DMI_OUT_FILEPATH
+    schema = avro_schemas.dmi
+    field_names = [d['name'] for d in schema['fields']]
     topic = 'dmi'
 elif 'imu' in instrument:
     filepath = IMU_OUT_FILEPATH
+    schema = avro_schemas.imu
+    field_names = [d['name'] for d in schema['fields']]
     topic = 'imu'
 elif 'lidar' in instrument:
     filepath = LIDAR_OUT_FILEPATH
+    schema = avro_schemas.lidar
+    field_names = [d['name'] for d in schema['fields']]
     topic = 'lidar'
 elif 'gps' in instrument:
     filepath = GPS_OUT_FILEPATH
+    schema = avro_schemas.gps  
+    field_names = [d['name'] for d in schema['fields']]
     topic = 'gps'
 else:
     print('ERROR: ARGUMENT {0} NOT IN INSTRUMENTS {1}'.format(args.instrument, INSTRUMENTS))
     assert False
 
+parsed_schema = parse_schema(schema)
+
 consumer = KafkaConsumer(topic,
                          group_id='A',
                          bootstrap_servers=['localhost:9092'])
  
-#schema_path="user.avsc"
-#schema = avro.schema.parse(open(schema_path).read())
-
 
 def write_to_disk(line, filepath):
     try:
-        with open(filepath, 'ab') as writer:
-            writer.write(line)
-            writer.write('\n'.encode())
+        with open(filepath, 'ab') as f:
+            f.write(line)
+            f.write('\n'.encode())
     except EnvironmentError as err:
         print('ERROR WRITING TO DISK: {0}'.format(err))
 
+
+def write_to_avro(line, schema, filepath):
+    try:
+        with open(filepath, 'a+b') as out:
+            writer(out, parsed_schema, line)
+    except EnvironmentError as err:
+        print('ERROR WRITING TO DISK (AVRO): {0}'.format(err))
+
+
+#def parse_line_to_avro(line, schema):
 
 
 
@@ -63,8 +83,11 @@ if __name__ == "__main__":
         #print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
         #                                      message.offset, message.key,
         #                                      message.value))
-        #line = message.value.decode('utf-8')
-        line = message.value
-        write_to_disk(line, filepath)
+        line = message.value.decode('utf-8').split(',')
+        line = [int(x) for x in line]
+        #line = message.value
         print(line)
+        records = [(dict(zip(field_names, line)))]
+        print(records)
+        write_to_avro(records, parsed_schema, filepath)
 
