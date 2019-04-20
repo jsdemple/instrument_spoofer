@@ -4,6 +4,8 @@ import argparse
 import csv
 import time
 
+from utils import parse_line_into_schema
+
 from fastavro import writer, reader, parse_schema
 import avro_schemas
 
@@ -83,11 +85,16 @@ if __name__ == "__main__":
         #print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
         #                                      message.offset, message.key,
         #                                      message.value))
-        line = message.value.decode('utf-8').split(',')
-        line = [int(x) for x in line]
+        raw_line = message.value
+        row = raw_line.decode('utf-8').split(',')
+        record = parse_line_into_schema(row, schema)
+
+        #line = message.value.decode('utf-8').split(',')
+        #line = [int(x) for x in line]
         #line = message.value
-        print(line)
-        records = [(dict(zip(field_names, line)))]
-        print(records)
-        write_to_avro(records, parsed_schema, filepath)
+        print(raw_line)
+        print(record)
+        #records = [(dict(zip(field_names, line)))]
+        #print(records)
+        #write_to_avro(records, parsed_schema, filepath)
 

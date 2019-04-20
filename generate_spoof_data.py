@@ -59,8 +59,6 @@ def spoof_from_csv(csv_filepath, delay_between_rows):
             message = ','.join(row)
             print(message)
             # send to kafka
-            records = dict(zip(field_names, row))
-            print(records)
             producer.send(topic, bytes(message, 'utf-8'))
             # wait for delay
             time.sleep(delay_between_rows)

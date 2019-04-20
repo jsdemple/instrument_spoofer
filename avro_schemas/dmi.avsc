@@ -1,8 +1,4 @@
-#/usr/bin/python
-
-# Avro Schemas for Sidewalk Instruments
-
-dmi = {
+{
  "namespace": "dmi.avro",
  "type": "record",
  "name": "sidewalk_rig",
